@@ -1,48 +1,38 @@
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client } from "@aws-sdk/client-s3";
+import { readTextractResult } from "../common/textract.helper";
+import { DynamoDBClient, GetItemCommand, GetItemCommandInput, PutItemCommand, QueryCommand, QueryCommandInput } from "@aws-sdk/client-dynamodb";
 
 const s3Client = new S3Client({ region: "ap-southeast-2" });
+const dynamoDbClient = new DynamoDBClient({ region: "ap-southeast-2" });
 
-const readDocumentResults = async (bucket: any, jobId: string, key: any): Promise<{ key: string, value: any, query: string }[] | null> => {
-    const params = {
-        Bucket: "hackathon-textract-results",
-        Key: `results/${jobId}/${key}`
-    };
-    console.log(params)
-    var json: any;
-    try {
-        const data = await s3Client.send(new GetObjectCommand(params));
-        json = JSON.parse(await data.Body?.transformToString() ?? "");
-    } catch (e) {
-        console.error(params, e);
-        return null;
-    }
-    var queries = json.Blocks.filter((b: any) => b.BlockType == "QUERY");
-    var queryResults = json.Blocks.filter((b: any) => b.BlockType == "QUERY_RESULT");
-
-    return queries?.map((block: any) => {
-        var key = block.Query.Alias;
-        var relationshipId = block.Relationships[0].Ids[0];
-        var value = queryResults.find((b: any) => b.Id == relationshipId)?.Text;
-        return { key, value, query: block.Query.Text };
-    });
-
-}
 
 export const handler = async (event: any) => {
     const message = JSON.parse(event.Records[0].Sns.Message)
-    var index = 1;
     console.log(message)
-    var resultMap: any = [];
-    while (true) {
-        const result = await readDocumentResults("hackathon-textract-results", message.JobId, index)
-        if (!result) {
-            break;
+    const resultMap = await readTextractResult(s3Client, "hackathon-textract-results", "results", message.JobId)
+    // search in dynamodb using GSI filename-index
+    var params: QueryCommandInput = {
+        TableName: "document",
+        IndexName: "filename-index",
+        KeyConditionExpression: "filename = :filename",
+        ExpressionAttributeValues: {
+            ":filename": { S: message.DocumentLocation.S3ObjectName }
         }
-        resultMap = [...resultMap, ...result]
-        index++;
-    }
+    };
+    const getCommand = new QueryCommand(params);
+    const queryResponse = await dynamoDbClient.send(getCommand);
+    var item = queryResponse.Items![0]
+    console.log(item)
+    item.status.S = "PARSED";
+    item.result = { S: JSON.stringify(resultMap) }
 
-
-    console.log(resultMap)
+    const input = {
+        "Item": {
+            ...item
+        },
+        "TableName": "document"
+    };
+    const command = new PutItemCommand(input);
+    await dynamoDbClient.send(command);
     return resultMap
 }

@@ -4,11 +4,13 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Topic } from 'aws-cdk-lib/aws-sns';
 import { LambdaSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
+import { Queue } from 'aws-cdk-lib/aws-sqs';
+import { Table } from 'aws-cdk-lib/aws-dynamodb';
 
 export class LambdaStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-
+    
     const checkDocumentTypeFunction = new NodejsFunction(this, 'CheckDocumentType', {
       runtime: Runtime.NODEJS_20_X,
       functionName: "CheckDocumentType",
@@ -17,6 +19,7 @@ export class LambdaStack extends cdk.Stack {
       bundling: {
         externalModules: ['aws-sdk'],
         minify: false,
+        metafile: true,
       },
     });
 
@@ -30,8 +33,13 @@ export class LambdaStack extends cdk.Stack {
       bundling: {
         externalModules: ['aws-sdk'],
         minify: false,
+        metafile: true,
       },
     });
+
+    const documentTable = Table.fromTableArn(this, 'DocumentTable', 'arn:aws:dynamodb:ap-southeast-2:732757519306:table/document');
+    documentTable.grantFullAccess(checkDocumentFunction);
+    
     this.updateLambdaPolicy(checkDocumentFunction)
 
     // allow lambda to access s3 bucket
@@ -43,6 +51,10 @@ export class LambdaStack extends cdk.Stack {
 
     const documentProcessedTopic = Topic.fromTopicArn(this, 'DocumentProcessed', 'arn:aws:sns:ap-southeast-2:732757519306:DocumentProcessed')
     documentProcessedTopic.addSubscription(new LambdaSubscription(checkDocumentFunction));
+
+    const sqs = new Queue(this, 'DocumentQueue', {
+      queueName: 'DocumentParsedQueue'
+    });
   }
 
   private updateLambdaPolicy(lambda: NodejsFunction) {

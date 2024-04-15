@@ -1,11 +1,12 @@
 import { S3Client, ListBucketsCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { StartDocumentAnalysisCommand, StartDocumentAnalysisCommandInput, TextractClient } from "@aws-sdk/client-textract";
+import { readTextractResult } from "../common/textract.helper";
 
 const s3Client = new S3Client({ region: "ap-southeast-2" });
 const textractClient = new TextractClient();
 
-const formQuestions = {
-    "vanguard_au_super_join": {
+const formQuestions: Record<string, any> = {
+    "join_vanguard_super_spendsmart_and_transitionsmart": {
         "QueriesConfig": {
             "Queries": [
                 {
@@ -35,6 +36,26 @@ const formQuestions = {
                         "2"
                     ],
                     "Text": "Person Vanguard Super member numbe"
+                }
+            ]
+        }
+    },
+    "default": {
+        "QueriesConfig": {
+            "Queries": [
+                {
+                    "Alias": "person_first_name",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person First name"
+                },
+                {
+                    "Alias": "person_last_name",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person Surname"
                 }
             ]
         }
@@ -86,22 +107,15 @@ exports.handler = async (event: any) => {
         Key: `type/${message.JobId}/1`
     };
     console.log(params)
-    var json: any;
-    try {
-        const data = await s3Client.send(new GetObjectCommand(params));
 
-        json = JSON.parse(await data.Body?.transformToString() ?? "");
-    }
-    catch (e) {
-        console.error(params, e);
-        throw e;
-    }
+    const resultMap = await readTextractResult(s3Client, "hackathon-textract-results", "type", message.JobId)
+    console.log(resultMap)
 
-
-    var result = json.Blocks.find((b: any) => b.BlockType == "QUERY_RESULT");
-    var resultObject = { "form_type": "unknown" }
-    if (result.Text == "Yes") {
-        return startDocumentAnalysis(message.DocumentLocation.S3Bucket, message.DocumentLocation.S3ObjectName, formQuestions["vanguard_au_super_join"])
-    }
-    return resultObject
+    var result = resultMap?.find((b: any) => b.key == "form_name");
+    console.log(result)
+    // lowercase value and replace spaces with _
+    var formKey: string = result?.value.toLowerCase().replace(/ /g, "_");
+    var formKey = formQuestions[formKey] ? formKey : "default"
+  
+    return await startDocumentAnalysis(message.DocumentLocation.S3Bucket, message.DocumentLocation.S3ObjectName, formQuestions[formKey])
 }
