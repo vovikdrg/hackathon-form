@@ -15,6 +15,7 @@ export class LambdaStack extends cdk.Stack {
       runtime: Runtime.NODEJS_20_X,
       functionName: "CheckDocumentType",
       handler: 'handler',
+      timeout: cdk.Duration.seconds(30),
       entry: 'document-type.lambda/index.ts',
       bundling: {
         externalModules: ['aws-sdk'],
@@ -30,7 +31,7 @@ export class LambdaStack extends cdk.Stack {
       functionName: "CheckDocumentResult",
       handler: 'handler',
       entry: 'document-result.lambda/index.ts',
-      
+      timeout: cdk.Duration.seconds(30),
       bundling: {
         externalModules: ['aws-sdk'],
         minify: false,

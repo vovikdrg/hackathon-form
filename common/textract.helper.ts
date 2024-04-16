@@ -34,14 +34,19 @@ export const readTextractResult = async (s3Client: S3Client, bucket: any, folder
 }
 
 export const calculateMean = (arr: { key: string, value: any, query: string, confidence: number }[]) => {
-    var confidence = arr.map((r: any) => r.confidence ?? 0)
+    arr = arr.filter((r: any) => r.confidence > 0)
+    if (arr.length == 0) return 0;
+    var confidence = arr.map((r: any) => r.confidence)
         .reduce((a: number, b: number) => a + b) / (arr.length ?? 1)
     return confidence;
 }
 
 export const calculateStdDev = (arr: { key: string, value: any, query: string, confidence: number }[]) => {
+    arr = arr.filter((r: any) => r.confidence > 0)
+    if (arr.length == 0) return 0;
     var mean = calculateMean(arr);
-    var stdDev = Math.sqrt(arr.map((r: any) => Math.pow((r.confidence ?? 0) - mean, 2))
+    var stdDev = Math.sqrt(arr
+        .map((r: any) => Math.pow((r.confidence) - mean, 2))
         .reduce((a, b) => a + b) / (arr.length ?? 1));
     return stdDev;
 }

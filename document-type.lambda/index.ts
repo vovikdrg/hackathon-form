@@ -1,9 +1,12 @@
 import { S3Client } from "@aws-sdk/client-s3";
 import { StartDocumentAnalysisCommand, StartDocumentAnalysisCommandInput, TextractClient } from "@aws-sdk/client-textract";
 import { readTextractResult } from "../common/textract.helper";
+import { findFileRecord, saveDocument } from "../common/dynamo.db.helper";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 
 const s3Client = new S3Client({ region: "ap-southeast-2" });
 const textractClient = new TextractClient();
+const dynamoDbClient = new DynamoDBClient({ region: "ap-southeast-2" });
 
 const formQuestions: Record<string, any> = {
     "join_vanguard_super_spendsmart_and_transitionsmart": {
@@ -98,7 +101,7 @@ const formQuestions: Record<string, any> = {
                     "Pages": [
                         "3"
                     ],
-                    "Text": "Person Occupation"
+                    "Text": "Occupation (if you have already retired, please provide your most recent occupation before retiring)*"
                 },
                 {
                     "Alias": "person.sourceOfFunds",
@@ -124,64 +127,78 @@ const formQuestions: Record<string, any> = {
                 {
                     "Alias": "account.paymentFrequency",
                     "Pages": [
-                        "5"
+                        "7"
                     ],
                     "Text": "Payment frequency"
                 },
                 {
                     "Alias": "account.whenToStart",
                     "Pages": [
-                        "5"
+                        "7"
                     ],
                     "Text": "When would you like your pension payments to start"
                 },
                 {
                     "Alias": "account.bankName",
                     "Pages": [
-                        "6"
+                        "10"
                     ],
                     "Text": "Name of bank"
                 },
                 {
                     "Alias": "account.bankBsb",
                     "Pages": [
-                        "6"
+                        "10"
                     ],
                     "Text": "BSB"
                 },
                 {
                     "Alias": "account.bankAccountNumber",
                     "Pages": [
-                        "6"
+                        "10"
                     ],
                     "Text": "Account number"
                 },
                 {
                     "Alias": "account.bankStatementCopy",
                     "Pages": [
-                        "6"
+                        "10"
                     ],
                     "Text": "Is \"I have attached a copy of a bank statement\" ticked"
                 }
             ]
         }
     },
-    "default": {
+    "unknown": {
         "QueriesConfig": {
             "Queries": [
                 {
                     "Alias": "person_first_name",
                     "Pages": [
-                        "2"
+                        "*"
                     ],
                     "Text": "Person First name"
                 },
                 {
                     "Alias": "person_last_name",
                     "Pages": [
-                        "2"
+                        "*"
                     ],
                     "Text": "Person Surname"
+                },
+                {
+                    "Alias": "account_number",
+                    "Pages": [
+                        "*"
+                    ],
+                    "Text": "Account number"
+                },
+                {
+                    "Alias": "person.name",
+                    "Pages": [
+                        "*"
+                    ],
+                    "Text": "Investor name"
                 }
             ]
         }
@@ -227,6 +244,7 @@ const startDocumentAnalysis = async (bucket: any, key: any, queryConfig: any) =>
 
 exports.handler = async (event: any) => {
     const message = JSON.parse(event.Records[0].Sns.Message)
+    const fileName = message.DocumentLocation.S3ObjectName.replace("upload/", "")
     console.log(JSON.stringify(event))
     const params = {
         Bucket: "hackathon-textract-results",
@@ -238,11 +256,19 @@ exports.handler = async (event: any) => {
     console.log(resultMap)
 
     var result = resultMap?.find((b: any) => b.key == "form_name");
-    console.log(result)
+    var queryResponse = await findFileRecord(dynamoDbClient, fileName)
+    const dynamoItem = queryResponse.Items![0];
+    
     // lowercase value and replace spaces with _
     var formKey: string = result?.value.toLowerCase().replace(/ /g, "_");
-    var formKey = formQuestions[formKey] ? formKey : "default"
+    dynamoItem.form_type = { S: formKey };
+
+
+    var formKey = formQuestions[formKey] ? formKey : "unknown"
     console.log(formKey)
+  
+    await saveDocument(dynamoDbClient, dynamoItem);
+
     return await startDocumentAnalysis(message.DocumentLocation.S3Bucket,
         message.DocumentLocation.S3ObjectName, formQuestions[formKey])
 }
