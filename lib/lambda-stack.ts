@@ -30,6 +30,7 @@ export class LambdaStack extends cdk.Stack {
       functionName: "CheckDocumentResult",
       handler: 'handler',
       entry: 'document-result.lambda/index.ts',
+      
       bundling: {
         externalModules: ['aws-sdk'],
         minify: false,
@@ -37,9 +38,6 @@ export class LambdaStack extends cdk.Stack {
       },
     });
 
-    const documentTable = Table.fromTableArn(this, 'DocumentTable', 'arn:aws:dynamodb:ap-southeast-2:732757519306:table/document');
-    documentTable.grantFullAccess(checkDocumentFunction);
-    
     this.updateLambdaPolicy(checkDocumentFunction)
 
     // allow lambda to access s3 bucket
@@ -67,7 +65,7 @@ export class LambdaStack extends cdk.Stack {
     // allow StartDocumentAnalysisCommand to be executed
     lambda.addToRolePolicy(
       new cdk.aws_iam.PolicyStatement({
-        actions: ["textract:StartDocumentAnalysis"],
+        actions: ["textract:StartDocumentAnalysis", "dynamodb:*", "sqs:*"],
         resources: ["*"]
       })
     );

@@ -1,4 +1,4 @@
-import { S3Client, ListBucketsCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client } from "@aws-sdk/client-s3";
 import { StartDocumentAnalysisCommand, StartDocumentAnalysisCommandInput, TextractClient } from "@aws-sdk/client-textract";
 import { readTextractResult } from "../common/textract.helper";
 
@@ -10,32 +10,158 @@ const formQuestions: Record<string, any> = {
         "QueriesConfig": {
             "Queries": [
                 {
-                    "Alias": "person_first_name",
+                    "Alias": "person.firstName",
                     "Pages": [
                         "2"
                     ],
                     "Text": "Person First name"
                 },
                 {
-                    "Alias": "person_last_name",
+                    "Alias": "person.middleName",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person Middle name"
+                },
+                {
+                    "Alias": "person.lastName",
                     "Pages": [
                         "2"
                     ],
                     "Text": "Person Surname"
                 },
                 {
-                    "Alias": "person_gender",
+                    "Alias": "person.gender",
                     "Pages": [
                         "2"
                     ],
                     "Text": "Person Gender"
                 },
                 {
-                    "Alias": "person_vanguard_number",
+                    "Alias": "person.dateOfBirth",
                     "Pages": [
                         "2"
                     ],
-                    "Text": "Person Vanguard Super member numbe"
+                    "Text": "Person Date of birth"
+                },
+                {
+                    "Alias": "person.vanguardId",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person Vanguard Super member number"
+                },
+                {
+                    "Alias": "person.residentialAddress.addressOne",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person Australian residential address"
+                },
+                {
+                    "Alias": "person.residentialAddress.suburb",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person Suburb*"
+                },
+                {
+                    "Alias": "person.residentialAddress.postCode",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person Postcode*"
+                },
+                {
+                    "Alias": "person.residentialAddress.state",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person State*"
+                },
+                {
+                    "Alias": "person.phoneNumber",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person Mobile"
+                },
+                {
+                    "Alias": "person.email",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Person Email address"
+                },
+                {
+                    "Alias": "person.occupation",
+                    "Pages": [
+                        "3"
+                    ],
+                    "Text": "Person Occupation"
+                },
+                {
+                    "Alias": "person.sourceOfFunds",
+                    "Pages": [
+                        "3"
+                    ],
+                    "Text": "Person Source of funds"
+                },
+                {
+                    "Alias": "account.type",
+                    "Pages": [
+                        "3"
+                    ],
+                    "Text": "Which Account to open"
+                },
+                {
+                    "Alias": "account.taxDeductions",
+                    "Pages": [
+                        "4"
+                    ],
+                    "Text": "Have you finalised any tax deductions you intend to claim for your personal super contributions"
+                },
+                {
+                    "Alias": "account.paymentFrequency",
+                    "Pages": [
+                        "5"
+                    ],
+                    "Text": "Payment frequency"
+                },
+                {
+                    "Alias": "account.whenToStart",
+                    "Pages": [
+                        "5"
+                    ],
+                    "Text": "When would you like your pension payments to start"
+                },
+                {
+                    "Alias": "account.bankName",
+                    "Pages": [
+                        "6"
+                    ],
+                    "Text": "Name of bank"
+                },
+                {
+                    "Alias": "account.bankBsb",
+                    "Pages": [
+                        "6"
+                    ],
+                    "Text": "BSB"
+                },
+                {
+                    "Alias": "account.bankAccountNumber",
+                    "Pages": [
+                        "6"
+                    ],
+                    "Text": "Account number"
+                },
+                {
+                    "Alias": "account.bankStatementCopy",
+                    "Pages": [
+                        "6"
+                    ],
+                    "Text": "Is \"I have attached a copy of a bank statement\" ticked"
                 }
             ]
         }
@@ -116,6 +242,7 @@ exports.handler = async (event: any) => {
     // lowercase value and replace spaces with _
     var formKey: string = result?.value.toLowerCase().replace(/ /g, "_");
     var formKey = formQuestions[formKey] ? formKey : "default"
-  
-    return await startDocumentAnalysis(message.DocumentLocation.S3Bucket, message.DocumentLocation.S3ObjectName, formQuestions[formKey])
+    console.log(formKey)
+    return await startDocumentAnalysis(message.DocumentLocation.S3Bucket,
+        message.DocumentLocation.S3ObjectName, formQuestions[formKey])
 }

@@ -19,12 +19,50 @@ export const readTextractResult = async (s3Client: S3Client, bucket: any, folder
 
     var result = queries?.map((block: any) => {
         var key = block.Query.Alias;
-        var relationshipId = block.Relationships[0].Ids[0];
-        var queryResult = queryResults.find((b: any) => b.Id == relationshipId);
-        var value = queryResult?.Text;
+        var value = ""
+        if (block.Relationships?.length > 0) {
+            var relationshipId = block.Relationships[0].Ids[0];
+            var queryResult = queryResults.find((b: any) => b.Id == relationshipId);
+            value = queryResult?.Text;
+        }
         return { key, value, query: block.Query.Text, confidence: queryResult?.Confidence };
     });
     var nextResult = await readTextractResult(s3Client, bucket, folder, jobId, ++key);
+    console.log(nextResult ? [...result, ...nextResult] : result)
     return nextResult ? [...result, ...nextResult] : result;
 
+}
+
+export const calculateMean = (arr: { key: string, value: any, query: string, confidence: number }[]) => {
+    var confidence = arr.map((r: any) => r.confidence ?? 0)
+        .reduce((a: number, b: number) => a + b) / (arr.length ?? 1)
+    return confidence;
+}
+
+export const calculateStdDev = (arr: { key: string, value: any, query: string, confidence: number }[]) => {
+    var mean = calculateMean(arr);
+    var stdDev = Math.sqrt(arr.map((r: any) => Math.pow((r.confidence ?? 0) - mean, 2))
+        .reduce((a, b) => a + b) / (arr.length ?? 1));
+    return stdDev;
+}
+
+/***
+ * Convert array of key value pair to object
+ * Key can be nested object separated by dot it will create proper object structure
+ */
+export const convertMapToObject = (arr: { key: string, value: any, query: string, confidence: number }[]) => {
+    var obj: any = {};
+    arr.forEach((r: any) => {
+        var keys = r.key.split('.');
+        var temp = obj;
+        keys.forEach((k: any, i: any) => {
+            if (i == keys.length - 1) {
+                temp[k] = r.value;
+            } else {
+                temp[k] = temp[k] ?? {};
+                temp = temp[k];
+            }
+        });
+    });
+    return obj;
 }
