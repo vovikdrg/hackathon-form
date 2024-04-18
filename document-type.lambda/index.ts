@@ -1,6 +1,6 @@
 import { S3Client } from "@aws-sdk/client-s3";
 import { StartDocumentAnalysisCommand, StartDocumentAnalysisCommandInput, TextractClient } from "@aws-sdk/client-textract";
-import { readTextractResult } from "../common/textract.helper";
+import { ADAPTER_VERSION, readTextractResult } from "../common/textract.helper";
 import { findFileRecord, saveDocument } from "../common/dynamo.db.helper";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 
@@ -9,6 +9,152 @@ const textractClient = new TextractClient();
 const dynamoDbClient = new DynamoDBClient({ region: "ap-southeast-2" });
 
 const formQuestions: Record<string, any> = {
+    "vanguard_professional_client_application_form_for_institutions_companies_and_intermediaries": {
+        "QueriesConfig": {
+            "Queries": [
+                {
+                    "Alias": "account.number",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Account Number"
+                },
+                {
+                    "Alias": "company.name",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Company/Entity name"
+                },
+                {
+                    "Alias": "company.number",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Registered number"
+                },
+                {
+                    "Alias": "account.address",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Applicant Address"
+                },
+                {
+                    "Alias": "account.town",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Applicant Town"
+                },
+                {
+                    "Alias": "account.postcode",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Applicant Postcode"
+                },
+                {
+                    "Alias": "account.industry",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Applicant Industry"
+                },
+                {
+                    "Alias": "account.industry",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Applicant Email"
+                },
+                {
+                    "Alias": "account.contactName",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Applicant Contact name"
+                },
+                {
+                    "Alias": "account.telNo",
+                    "Pages": [
+                        "1"
+                    ],
+                    "Text": "Applicant Tel no."
+                },
+                {
+                    "Alias": "investor_type",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Investor Type for Anti-Money Laundering Purposes"
+                },
+                {
+                    "Alias": "agent.address",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Agent Registered address"
+                },
+                {
+                    "Alias": "agent.town",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Agent Town"
+                },
+                {
+                    "Alias": "agent.postcode",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Agent Postcode"
+                },
+                {
+                    "Alias": "agent.contactName",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Agent Contact name"
+                },
+                {
+                    "Alias": "agent.email",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Agent contact email address"
+                },
+                {
+                    "Alias": "agent.telNo",
+                    "Pages": [
+                        "2"
+                    ],
+                    "Text": "Agent contact telephone number"
+                },
+                {
+                    "Alias": "investment.fundName",
+                    "Pages": [
+                        "3"
+                    ],
+                    "Text": "Investment fund name"
+                },
+                {
+                    "Alias": "investment.ISIN",
+                    "Pages": [
+                        "3"
+                    ],
+                    "Text": "Investment ISIN"
+                },
+                {
+                    "Alias": "investment.unitAmount",
+                    "Pages": [
+                        "3"
+                    ],
+                    "Text": "Investment Unit Amount"
+                }
+            ]
+        }
+    },
     "join_vanguard_super_spendsmart_and_transitionsmart": {
         "QueriesConfig": {
             "Queries": [
@@ -120,7 +266,7 @@ const formQuestions: Record<string, any> = {
                 {
                     "Alias": "account.taxDeductions",
                     "Pages": [
-                        "4"
+                        "5"
                     ],
                     "Text": "Have you finalised any tax deductions you intend to claim for your personal super contributions"
                 },
@@ -165,6 +311,98 @@ const formQuestions: Record<string, any> = {
                         "10"
                     ],
                     "Text": "Is \"I have attached a copy of a bank statement\" ticked"
+                },
+                {
+                    "Alias": "kyc.medicare.fullName",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "Medicare details Full Name"
+                }
+                ,
+                {
+                    "Alias": "kyc.medicare.number",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "Medicare number"
+                },
+                {
+                    "Alias": "kyc.medicare.ref",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "Medicare card ref. no."
+                },
+                {
+                    "Alias": "kyc.medicare.validTo",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "Medicare Valid to"
+                },
+                {
+                    "Alias": "kyc.driverLicense.firstName",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "Driver's license Given Name/s"
+                },
+                {
+                    "Alias": "kyc.driverLicense.lastName",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "Driver's license Surname Name"
+                },
+                {
+                    "Alias": "kyc.driverLicense.number",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "Australian driver's license number"
+                },
+                {
+                    "Alias": "kyc.driverLicense.state",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "State of issue"
+                },
+                {
+                    "Alias": "kyc.driverLicense.expiryDate",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "Expiry date"
+                },
+                {
+                    "Alias": "kyc.driverLicense.cardNumber",
+                    "Pages": [
+                        "16"
+                    ],
+                    "Text": "Driver's license Card number"
+                },
+                {
+                    "Alias": "investment.defaultAllocation",
+                    "Pages": [
+                        "6"
+                    ],
+                    "Text": 'Is "Please invest my account in the same way as my Vanguard Super SaveSmart account is invested" ticked'
+                },
+                {
+                    "Alias": "investment.growth",
+                    "Pages": [
+                        "6"
+                    ],
+                    "Text": 'Investment options Growth'
+                },
+                {
+                    "Alias": "investment.balance",
+                    "Pages": [
+                        "6"
+                    ],
+                    "Text": 'Investment options Balance'
                 }
             ]
         }
@@ -192,13 +430,6 @@ const formQuestions: Record<string, any> = {
                         "*"
                     ],
                     "Text": "Account number"
-                },
-                {
-                    "Alias": "person.name",
-                    "Pages": [
-                        "*"
-                    ],
-                    "Text": "Investor name"
                 }
             ]
         }
@@ -231,7 +462,7 @@ const startDocumentAnalysis = async (bucket: any, key: any, queryConfig: any) =>
                     "Pages": [
                         "*"
                     ],
-                    "Version": "3"
+                    "Version": ADAPTER_VERSION
                 }
             ]
         },
@@ -258,15 +489,17 @@ exports.handler = async (event: any) => {
     var result = resultMap?.find((b: any) => b.key == "form_name");
     var queryResponse = await findFileRecord(dynamoDbClient, fileName)
     const dynamoItem = queryResponse.Items![0];
-    
+
     // lowercase value and replace spaces with _
-    var formKey: string = result?.value.toLowerCase().replace(/ /g, "_");
+    var formKey: string = result?.value.toLowerCase()
+        .replace(/,/g, "")
+        .replace(/ /g, "_");
     dynamoItem.form_type = { S: formKey };
 
 
     var formKey = formQuestions[formKey] ? formKey : "unknown"
     console.log(formKey)
-  
+
     await saveDocument(dynamoDbClient, dynamoItem);
 
     return await startDocumentAnalysis(message.DocumentLocation.S3Bucket,

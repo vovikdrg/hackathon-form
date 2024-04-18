@@ -1,5 +1,7 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
+export const ADAPTER_VERSION = "5"
+
 export const readTextractResult = async (s3Client: S3Client, bucket: any, folder: string, jobId: string, key: number = 1): Promise<{ key: string, value: any, query: string, confidence: number }[] | null> => {
     const params = {
         Bucket: bucket,
