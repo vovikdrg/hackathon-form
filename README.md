@@ -16,3 +16,9 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 # Architecture diagram
 
 ![Architecture diagram](./form-professor.drawio.png)
+
+# Future thoughts
+
+This is POC solution how in no time we can use extract to read documents. 
+
+In future we can combine it with AWS Bedrock and custom llm model to guide process. Potentially spinning agent and giving it Swagger API to interact based on it query documents dynamically.
